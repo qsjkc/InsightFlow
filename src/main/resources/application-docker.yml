@@ -1,0 +1,22 @@
+# Docker 部署环境：通过容器名连接 Redis，端口仍为 8080（与容器映射一致）
+server:
+  port: 8080
+  # 开启 Tomcat 访问日志（部署后便于排查访问问题）
+  tomcat:
+    accesslog:
+      enabled: true
+      directory: /tmp/tomcat-logs
+
+# Redis 配置：对接 Docker 网络中的 redis 容器（通过容器名访问）
+spring:
+  data:
+    redis:
+      host: redis  # Docker Compose 中 Redis 服务名，无需 IP
+      port: 6379
+      password: 123456aq@
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 2

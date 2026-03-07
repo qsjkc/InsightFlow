@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>InsightFlow 实时监控大屏</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .monitor-card { border: 1px solid #ccc; padding: 20px; margin: 10px 0; border-radius: 8px; }
+        .anomaly { color: red; font-weight: bold; }
+        .normal { color: green; }
+        .data-item { margin: 5px 0; }
+    </style>
+    <!-- 引入SockJS和STOMP客户端 -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</head>
+<body>
+<h1>InsightFlow 实时监控大屏</h1>
+<div class="monitor-card">
+    <h2>服务器：server-01</h2>
+    <div class="data-item">采集时间：<span id="collectTime">--</span></div>
+    <div class="data-item">CPU使用率：<span id="cpuUsage">--</span>%
+        <span id="cpuAnomaly">(正常)</span>
+    </div>
+    <div class="data-item">内存使用率：<span id="memUsage">--</span>%
+        <span id="memAnomaly">(正常)</span>
+    </div>
+    <div class="data-item">磁盘使用率：<span id="diskUsage">--</span>%
+        <span id="diskAnomaly">(正常)</span>
+    </div>
+</div>
+
+<script>
+    /**
+     * @type {SockJS}
+     */
+    const socket = new SockJS('/ws/monitor');
+    /**
+     * @type {Stomp}
+     */
+    const stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, function (frame) {
+        console.log('Connected: ' + frame);
+        stompClient.subscribe('/topic/monitor/data', function (message) {
+            const data = JSON.parse(message.body);
+            console.log('收到监控数据：', data);
+
+            document.getElementById('collectTime').textContent = data.rawData.collectTime;
+            document.getElementById('cpuUsage').textContent = data.rawData.cpuUsage;
+            document.getElementById('memUsage').textContent = data.rawData.memUsage;
+            document.getElementById('diskUsage').textContent = data.rawData.diskUsage;
+
+            updateAnomalyStatus('cpuAnomaly', data.cpuResult.isAnomaly);
+            updateAnomalyStatus('memAnomaly', data.memResult.isAnomaly);
+            updateAnomalyStatus('diskAnomaly', data.diskResult.isAnomaly);
+        });
+    });
+
+    /**
+     * 更新异常状态显示
+     * @param {string} elementId
+     * @param {boolean} isAnomaly
+     */
+    function updateAnomalyStatus(elementId, isAnomaly) {
+        const element = document.getElementById(elementId);
+        if (isAnomaly) {
+            element.textContent = '(异常！)';
+            element.className = 'anomaly';
+        } else {
+            element.textContent = '(正常)';
+            element.className = 'normal';
+        }
+    }
+
+    window.onbeforeunload = function() {
+        stompClient.disconnect();
+    };
+</script>
+</body>
+</html>

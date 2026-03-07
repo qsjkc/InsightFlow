@@ -1,0 +1,16 @@
+# 项目全局主配置：仅负责激活环境，不写具体业务配置
+spring:
+  # 环境激活开关：local(本地开发) / docker(虚拟机部署)
+  profiles:
+    active: docker
+  # 项目名称（Spring Boot 上下文标识，后续日志/监控会用到）
+  application:
+    name: InsightFlowLite
+
+# 日志配置：简化启动日志，方便排查问题
+logging:
+  level:
+    # 只打印项目包下的日志，屏蔽无关依赖日志
+    com.example: INFO
+    # Redis 连接日志（调试时开启，上线后关闭）
+    org.springframework.data.redis: WARN

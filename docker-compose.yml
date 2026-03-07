@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:latest
+    container_name: insightflow-redis
+    restart: unless-stopped
+    command: redis-server --requirepass 123456aq@ --protected-mode no
+    ports:
+      - "6379:6379"          # 如果需要外部访问可保留，否则可移除
+    networks:
+      - insightflow-net
+
+  app:
+    build: .
+    container_name: insightflow-app
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      - SPRING_DATA_REDIS_HOST=redis          # 对应 docker-compose 中的服务名
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_DATA_REDIS_PASSWORD=123456aq@
+    ports:
+      - "8080:8080"
+    networks:
+      - insightflow-net
+
+networks:
+  insightflow-net:
+    driver: bridge
