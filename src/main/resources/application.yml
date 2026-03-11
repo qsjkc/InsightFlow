@@ -6,11 +6,25 @@ spring:
   # 项目名称（Spring Boot 上下文标识，后续日志/监控会用到）
   application:
     name: InsightFlowLite
+  # 邮件服务器配置
+  mail:
+    host: smtp.example.com
+    port: 587
+    username: alert@insightflow.com
+    password: your-email-password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 # 日志配置：简化启动日志，方便排查问题
 logging:
   level:
     # 只打印项目包下的日志，屏蔽无关依赖日志
-    com.example: INFO
+    'com.example': INFO
     # Redis 连接日志（调试时开启，上线后关闭）
-    org.springframework.data.redis: WARN
+    'org.springframework.data.redis': WARN
+    # 邮件日志
+    'org.springframework.mail': INFO

@@ -35,8 +35,15 @@ public class MonitorDataConsumer {
 
     @PostConstruct
     public void startConsume() {
-        executor.submit(this::consumeLoop);
-        log.info("监控数据消费者已启动，开始监听队列：{}", QUEUE_KEY);
+        try {
+            // 尝试连接Redis，检查连接状态
+            redisTemplate.getConnectionFactory().getConnection().ping();
+            log.info("成功连接到Redis服务器");
+            executor.submit(this::consumeLoop);
+            log.info("监控数据消费者已启动，开始监听队列：{}", QUEUE_KEY);
+        } catch (Exception e) {
+            log.warn("Redis连接失败，监控数据消费者将不启动：{}", e.getMessage());
+        }
     }
 
     @PreDestroy

@@ -1,6 +1,7 @@
 package com.example.insightflow_lite.service;
 
 import com.example.insightflow_lite.model.MonitorData;
+import com.example.insightflow_lite.service.AlertService;
 import com.example.insightflow_lite.websocket.WebSocketPushService; // 关键：补上这个导入
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +20,9 @@ public class AnomalyDetectionService {
 
     @Autowired
     private WebSocketPushService webSocketPushService;
+    
+    @Autowired
+    private AlertService alertService;
 
     public AnomalyDetectionService() {
         historyData.put("cpu", new ArrayList<>());
@@ -40,6 +44,17 @@ public class AnomalyDetectionService {
 
         if (anomaly.isAnyAnomaly()) {
             log.error("检测到异常数据：{}", anomaly);
+            
+            // 发送报警邮件
+            if (cpuResult.isAnomaly()) {
+                alertService.sendMonitorAlert(data.getServerId(), "CPU使用率", data.getCpuUsage(), cpuResult.getAvg() + 3 * cpuResult.getStd());
+            }
+            if (memResult.isAnomaly()) {
+                alertService.sendMonitorAlert(data.getServerId(), "内存使用率", data.getMemUsage(), memResult.getAvg() + 3 * memResult.getStd());
+            }
+            if (diskResult.isAnomaly()) {
+                alertService.sendMonitorAlert(data.getServerId(), "磁盘使用率", data.getDiskUsage(), diskResult.getAvg() + 3 * diskResult.getStd());
+            }
         }
     }
 

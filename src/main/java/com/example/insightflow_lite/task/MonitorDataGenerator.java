@@ -39,9 +39,17 @@ public class MonitorDataGenerator {
             double disk = 70 + random.nextDouble() * 25;
             MonitorData data = new MonitorData(cpu, mem, disk);
 
-            // 直接处理数据，跳过Redis
-            anomalyDetectionService.processMonitorData(data);
-            log.info("生成监控数据并直接处理：{}", data);
+            try {
+                // 尝试将数据写入Redis队列
+                String dataJson = objectMapper.writeValueAsString(data);
+                redisTemplate.opsForList().leftPush(QUEUE_KEY, dataJson);
+                log.info("Redis连接正常，生成监控数据并写入队列：{}", dataJson);
+            } catch (Exception redisEx) {
+                // Redis连接失败，直接处理数据
+                log.warn("Redis连接失败，直接处理监控数据: {}", redisEx.getMessage());
+                anomalyDetectionService.processMonitorData(data);
+                log.info("生成监控数据并直接处理：{}", data);
+            }
         } catch (Exception e) {
             log.error("生成监控数据失败", e);
         }
