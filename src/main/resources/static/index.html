@@ -2,33 +2,262 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InsightFlow 实时监控大屏</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .monitor-card { border: 1px solid #ccc; padding: 20px; margin: 10px 0; border-radius: 8px; }
-        .anomaly { color: red; font-weight: bold; }
-        .normal { color: green; }
-        .data-item { margin: 5px 0; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .monitor-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .monitor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+        
+        .monitor-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #444;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .data-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+        
+        .data-item:hover {
+            background: #e9ecef;
+        }
+        
+        .data-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .data-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #333;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 10px;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .anomaly {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .anomaly .status-dot {
+            background-color: #dc3545;
+        }
+        
+        .normal {
+            color: #28a745;
+        }
+        
+        .normal .status-dot {
+            background-color: #28a745;
+        }
+        
+        .metrics-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: scale(1.05);
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: white;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .metrics-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
     </style>
     <!-- 引入SockJS和STOMP客户端 -->
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 </head>
 <body>
-<h1>InsightFlow 实时监控大屏</h1>
-<div class="monitor-card">
-    <h2>服务器：server-01</h2>
-    <div class="data-item">采集时间：<span id="collectTime">--</span></div>
-    <div class="data-item">CPU使用率：<span id="cpuUsage">--</span>%
-        <span id="cpuAnomaly">(正常)</span>
+    <div class="container">
+        <div class="header">
+            <h1>InsightFlow 实时监控大屏</h1>
+            <p>实时监控服务器状态，及时发现异常</p>
+        </div>
+        
+        <div class="dashboard">
+            <div class="monitor-card">
+                <h2>服务器：server-01</h2>
+                <div class="data-item">
+                    <span class="data-label">采集时间：</span>
+                    <span class="data-value" id="collectTime">--</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">CPU使用率：</span>
+                    <div style="display: flex; align-items: center;">
+                        <span class="data-value" id="cpuUsage">--</span>%
+                        <span class="status-indicator normal" id="cpuAnomaly">
+                            <span class="status-dot"></span>
+                            <span>(正常)</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">内存使用率：</span>
+                    <div style="display: flex; align-items: center;">
+                        <span class="data-value" id="memUsage">--</span>%
+                        <span class="status-indicator normal" id="memAnomaly">
+                            <span class="status-dot"></span>
+                            <span>(正常)</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">磁盘使用率：</span>
+                    <div style="display: flex; align-items: center;">
+                        <span class="data-value" id="diskUsage">--</span>%
+                        <span class="status-indicator normal" id="diskAnomaly">
+                            <span class="status-dot"></span>
+                            <span>(正常)</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="metrics-container">
+            <div class="metric-card">
+                <div class="metric-label">CPU使用率</div>
+                <div class="metric-value" id="cpuMetric">--</div>
+                <div class="metric-label">实时监控</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">内存使用率</div>
+                <div class="metric-value" id="memMetric">--</div>
+                <div class="metric-label">实时监控</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">磁盘使用率</div>
+                <div class="metric-value" id="diskMetric">--</div>
+                <div class="metric-label">实时监控</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>© 2026 InsightFlow 实时监控系统</p>
+        </div>
     </div>
-    <div class="data-item">内存使用率：<span id="memUsage">--</span>%
-        <span id="memAnomaly">(正常)</span>
-    </div>
-    <div class="data-item">磁盘使用率：<span id="diskUsage">--</span>%
-        <span id="diskAnomaly">(正常)</span>
-    </div>
-</div>
 
 <script>
     /**
@@ -50,6 +279,11 @@
             document.getElementById('cpuUsage').textContent = data.rawData.cpuUsage;
             document.getElementById('memUsage').textContent = data.rawData.memUsage;
             document.getElementById('diskUsage').textContent = data.rawData.diskUsage;
+            
+            // 更新指标卡片
+            document.getElementById('cpuMetric').textContent = data.rawData.cpuUsage + '%';
+            document.getElementById('memMetric').textContent = data.rawData.memUsage + '%';
+            document.getElementById('diskMetric').textContent = data.rawData.diskUsage + '%';
 
             updateAnomalyStatus('cpuAnomaly', data.cpuResult.isAnomaly);
             updateAnomalyStatus('memAnomaly', data.memResult.isAnomaly);
@@ -65,11 +299,11 @@
     function updateAnomalyStatus(elementId, isAnomaly) {
         const element = document.getElementById(elementId);
         if (isAnomaly) {
-            element.textContent = '(异常！)';
-            element.className = 'anomaly';
+            element.innerHTML = '<span class="status-dot"></span><span>(异常！)</span>';
+            element.className = 'status-indicator anomaly';
         } else {
-            element.textContent = '(正常)';
-            element.className = 'normal';
+            element.innerHTML = '<span class="status-dot"></span><span>(正常)</span>';
+            element.className = 'status-indicator normal';
         }
     }
 

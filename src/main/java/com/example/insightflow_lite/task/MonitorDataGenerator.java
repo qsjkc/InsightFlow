@@ -1,6 +1,7 @@
 package com.example.insightflow_lite.task;
 
 import com.example.insightflow_lite.model.MonitorData;
+import com.example.insightflow_lite.service.AnomalyDetectionService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -20,10 +21,12 @@ public class MonitorDataGenerator {
     private final Random random = new Random();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final StringRedisTemplate redisTemplate;
+    private final AnomalyDetectionService anomalyDetectionService;
 
     // 构造器注入
-    public MonitorDataGenerator(StringRedisTemplate redisTemplate) {
+    public MonitorDataGenerator(StringRedisTemplate redisTemplate, AnomalyDetectionService anomalyDetectionService) {
         this.redisTemplate = redisTemplate;
+        this.anomalyDetectionService = anomalyDetectionService;
     }
 
     // 每秒执行一次，生成监控数据
@@ -36,13 +39,9 @@ public class MonitorDataGenerator {
             double disk = 70 + random.nextDouble() * 25;
             MonitorData data = new MonitorData(cpu, mem, disk);
 
-            // 写入 Redis List 队列（左进右出）
-            String dataJson = objectMapper.writeValueAsString(data);
-            redisTemplate.opsForList().leftPush(QUEUE_KEY, dataJson);
-
-            log.info("生成监控数据并写入队列：{}", dataJson);
-        } catch (JsonProcessingException e) {
-            log.error("JSON序列化失败", e);
+            // 直接处理数据，跳过Redis
+            anomalyDetectionService.processMonitorData(data);
+            log.info("生成监控数据并直接处理：{}", data);
         } catch (Exception e) {
             log.error("生成监控数据失败", e);
         }

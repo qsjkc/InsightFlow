@@ -73,12 +73,24 @@ public class MonitorDataConsumer {
                 log.error("JSON解析失败，数据: {}", e.getMessage());
             } catch (IllegalStateException e) {
                 // Redis 连接工厂已关闭（如 STOPPING 或 destroyed）
-                log.error("Redis连接已不可用，消费者将退出：{}", e.getMessage());
-                running = false;
+                log.warn("Redis连接已不可用，消费者将继续运行：{}", e.getMessage());
+                // 不退出，继续运行
+                try {
+                    Thread.sleep(5000); // 休眠5秒后重试
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    running = false;
+                }
             } catch (RedisConnectionFailureException e) {
                 // 其他 Redis 连接失败情况
-                log.error("Redis连接失败，消费者将退出：{}", e.getMessage());
-                running = false;
+                log.warn("Redis连接失败，消费者将继续运行：{}", e.getMessage());
+                // 不退出，继续运行
+                try {
+                    Thread.sleep(5000); // 休眠5秒后重试
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    running = false;
+                }
             } catch (Exception e) {
                 log.error("消费消息发生未知异常", e);
                 // 可根据需要决定是否继续运行，此处选择继续并短暂休眠避免空转

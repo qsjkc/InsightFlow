@@ -2,7 +2,7 @@
 spring:
   # 环境激活开关：local(本地开发) / docker(虚拟机部署)
   profiles:
-    active: docker
+    active: local
   # 项目名称（Spring Boot 上下文标识，后续日志/监控会用到）
   application:
     name: InsightFlowLite
